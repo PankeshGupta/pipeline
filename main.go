@@ -144,6 +144,11 @@ func main() {
 			orgs.GET("/:orgid/clusters/:id/helm/charts", api.HelmCharts)
 			orgs.GET("/:orgid/clusters/:id/helm/chart/:reponame/:name/:version", api.HelmChart)
 			orgs.GET("/:orgid/clusters/:id/helm/chart/:reponame/:name", api.HelmChart)
+
+			orgs.GET("/:orgid/clusters/:id/ssh", api.SshKeyGet)
+			orgs.POST("/:orgid/clusters/:id/ssh", api.SshKeyAdd)
+			orgs.DELETE("/:orgid/clusters/:id/ssh", api.SshKeyDelete)
+
 			orgs.GET("/:orgid/profiles/cluster/:type", api.GetClusterProfiles)
 			orgs.POST("/:orgid/profiles/cluster", api.AddClusterProfile)
 			orgs.PUT("/:orgid/profiles/cluster", api.UpdateClusterProfile)
