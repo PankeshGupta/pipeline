@@ -16,10 +16,11 @@ import (
 )
 
 type ManagedGoogleBuckets struct {
-	ID     uint      `gorm:"primary_key"`
-	User   auth.User `gorm:"foreignkey:UserID"`
-	UserID uint			 `gorm:"index;not null"`
-	Name   string    `gorm:"unique_index:bucketName"`
+	ID       uint      `gorm:"primary_key"`
+	User     auth.User `gorm:"foreignkey:UserID"`
+	UserID   uint			 `gorm:"index;not null"`
+	Name     string    `gorm:"unique_index:bucketName"`
+	Region string
 }
 
 type GoogleObjectStore struct {
@@ -71,7 +72,7 @@ func (b *GoogleObjectStore) CreateBucket(bucketName string) error {
 		Location:      b.location,
 		RequesterPays: false,
 	}
-	err = persistToDb(&ManagedGoogleBuckets{Name: bucketName, User: *b.user})
+	err = persistToDb(&ManagedGoogleBuckets{Name: bucketName, User: *b.user, Region: b.location})
 	if err != nil {
 		log.Errorf("Error happened during persisting bucket description to DB")
 		return err

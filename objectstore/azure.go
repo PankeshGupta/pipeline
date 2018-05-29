@@ -15,6 +15,7 @@ import (
 	"strings"
 	pipelineAuth "github.com/banzaicloud/pipeline/auth"
 	"github.com/banzaicloud/pipeline/model"
+	"net/http"
 )
 
 type ManagedAzureBlobStore struct {
@@ -24,6 +25,7 @@ type ManagedAzureBlobStore struct {
 	Name   				 string    `gorm:"unique_index:bucketName"`
 	ResourceGroup  string
 	StorageAccount string
+	Region				 string
 }
 
 type AzureObjectStore struct {
@@ -189,7 +191,7 @@ func createResourceGroup(b *AzureObjectStore) error {
 	}
 	gclient.Authorizer = authorizer
 	res, _ := gclient.Get(context.TODO(), b.resourceGroup)
-	if res.StatusCode != 404 {
+	if res.StatusCode != http.StatusNotFound {
 		result, err := gclient.CreateOrUpdate(context.TODO(), b.resourceGroup,
 			resources.Group{Location: to.StringPtr(b.location)})
 		if err != nil {
