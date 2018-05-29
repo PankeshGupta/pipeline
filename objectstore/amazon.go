@@ -8,8 +8,6 @@ import (
 	"github.com/banzaicloud/pipeline/secret"
 	"github.com/sirupsen/logrus"
 	"github.com/banzaicloud/pipeline/auth"
-	"github.com/banzaicloud/pipeline/model"
-	"fmt"
 	"github.com/pkg/errors"
 )
 
@@ -40,7 +38,7 @@ func (b *AmazonObjectStore) CreateBucket(bucketName string) error {
 	input := &s3.CreateBucketInput{
 		Bucket: aws.String(bucketName),
 	}
-	err = persistToDb(bucketName, b.user, b.region)
+	err = persistToDb(&ManagedAmazonBucket{Name: bucketName, User: *b.user, Region: b.region})
 	if err != nil {
 		log.Errorf("Error happened during persisting bucket description to DB")
 		return err
@@ -48,7 +46,7 @@ func (b *AmazonObjectStore) CreateBucket(bucketName string) error {
 	_, err = svc.CreateBucket(input)
 	if err != nil {
 		log.Errorf("Could not create a new S3 Bucket, %s", err.Error())
-		errors.Wrap(err, deleteFromDb(bucketName).Error())
+		errors.Wrap(err, deleteFromDb(&ManagedAmazonBucket{Name:bucketName}).Error())
 		return err
 	}
 	log.Debugf("Waiting for bucket %s to be created...", bucketName)
@@ -123,25 +121,6 @@ func (b *AmazonObjectStore) createS3Client() (*s3.S3, error) {
 	return s3.New(s), nil
 }
 
-func persistToDb(bucketName string, user *auth.User, region string) error {
-	db := model.GetDB()
-	cs := ManagedAmazonBucket{Name: bucketName, User: *user, Region: region}
-	return db.Save(&cs).Error
-}
-
-
-func deleteFromDb(bucketName string) error {
-	log := logger.WithFields(logrus.Fields{"tag": "deleteFromDb"})
-	log.Info("Deleting from DB...")
-	db := model.GetDB()
-	bucketDesc := &ManagedAmazonBucket{}
-	if db.Find(bucketDesc, ManagedAmazonBucket{Name:bucketName}).Error != nil {
-		return fmt.Errorf("could not find bucketName %s in DB", bucketName)
-	}
-	return db.Delete(bucketDesc).Error
-}
-
-
 func (b *AmazonObjectStore) newManagedBucketSearchCriteria(bucketName string) *ManagedAmazonBucket {
 	return &ManagedAmazonBucket{
 		Region: b.region,
@@ -149,4 +128,3 @@ func (b *AmazonObjectStore) newManagedBucketSearchCriteria(bucketName string) *M
 		Name:   bucketName,
 	}
 }
-

@@ -209,7 +209,3 @@ func newAuthorizer(s *secret.SecretsItemResponse) (autorest.Authorizer, error) {
 
 	return authorizer, nil
 }
-
-func (b *AzureObjectStore) Persist(bucketName string, user *pipelineAuth.User) error {
-	return nil
-}

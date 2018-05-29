@@ -124,7 +124,3 @@ func newGoogleCredentials(b *GoogleObjectStore) (*google.Credentials, error) {
 
 	return credentials, nil
 }
-
-func (b *GoogleObjectStore) Persist(bucketName string, user *auth.User) error {
-	return nil
-}

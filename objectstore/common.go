@@ -84,7 +84,6 @@ func NewAzureObjectStore(s *secret.SecretsItemResponse, resourceGroup, storageAc
 	}, nil
 }
 
-
 func getManagedBucket(searchCriteria interface{}) (interface{}, error) {
 	var managedBuckets []interface{}
 
@@ -103,5 +102,18 @@ func getManagedBucket(searchCriteria interface{}) (interface{}, error) {
 	managedBucket := managedBuckets[0]
 
 	return &managedBucket, nil
+}
 
+func persistToDb(m interface{}) error {
+	log := logger.WithFields(logrus.Fields{"tag": "persistToDb"})
+	log.Info("Persisting Bucket Description to Db")
+	db := model.GetDB()
+	return db.Save(m).Error
+}
+
+func deleteFromDb(deleteCriteria interface{}) error {
+	log := logger.WithFields(logrus.Fields{"tag": "deleteFromDb"})
+	log.Info("Deleting from DB...")
+	db := model.GetDB()
+	return db.Delete(deleteCriteria, deleteCriteria).Error
 }
