@@ -175,6 +175,12 @@
 
 [[projects]]
   branch = "master"
+  name = "github.com/banzaicloud/logrus-runtime-formatter"
+  packages = ["."]
+  revision = "225ee6ea5ab2b04284a6aa2a221086f5b02fad43"
+
+[[projects]]
+  branch = "master"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
@@ -1733,6 +1739,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "f76f9ecff6341bdb724f730e90875ef83120f0ac6f6555987446c35b71a9cede"
+  inputs-digest = "0d2ddc0ca884b3eccd024536fdca51ed412ae836fdd0ae417265e7dae1156560"
   solver-name = "gps-cdcl"
   solver-version = 1

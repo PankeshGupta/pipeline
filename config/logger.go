@@ -1,6 +1,7 @@
 package config
 
 import (
+	runtime "github.com/banzaicloud/logrus-runtime-formatter"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -27,15 +28,17 @@ func Logger() *logrus.Logger {
 			logger.Level = logrus.InfoLevel
 		}
 
+		var formatter logrus.Formatter
 		switch viper.GetString("log.logformat") {
 		case "text":
-			logger.Formatter = new(logrus.TextFormatter)
+			formatter = new(logrus.TextFormatter)
 		case "json":
-			logger.Formatter = new(logrus.JSONFormatter)
+			formatter = new(logrus.JSONFormatter)
 		default:
-			logger.Formatter = new(logrus.TextFormatter)
+			formatter = new(logrus.TextFormatter)
 		}
 
+		logger.Formatter = &runtime.Formatter{ChildFormatter: formatter}
 	}
 	return logger
 }
