@@ -124,6 +124,13 @@ func persistToDb(m interface{}) error {
 	return db.Save(m).Error
 }
 
+func deleteFromDbByPK(deleteCriteria interface{}) error {
+	log := logger.WithFields(logrus.Fields{"tag": "deleteFromDbByPK"})
+	log.Info("Deleting from DB...")
+	db := model.GetDB()
+	return db.Delete(deleteCriteria).Error
+}
+
 func deleteFromDb(deleteCriteria interface{}) error {
 	log := logger.WithFields(logrus.Fields{"tag": "deleteFromDb"})
 	log.Info("Deleting from DB...")

@@ -8,7 +8,6 @@ import (
 	"github.com/banzaicloud/pipeline/secret"
 	"github.com/sirupsen/logrus"
 	"github.com/banzaicloud/pipeline/auth"
-	"github.com/pkg/errors"
 	"github.com/banzaicloud/pipeline/model"
 )
 
@@ -39,7 +38,8 @@ func (b *AmazonObjectStore) CreateBucket(bucketName string) error {
 	input := &s3.CreateBucketInput{
 		Bucket: aws.String(bucketName),
 	}
-	err = persistToDb(&ManagedAmazonBucket{Name: bucketName, User: *b.user, Region: b.region})
+	managedModel := &ManagedAmazonBucket{Name: bucketName, User: *b.user, Region: b.region}
+	err = persistToDb(managedModel)
 	if err != nil {
 		log.Errorf("Error happened during persisting bucket description to DB")
 		return err
@@ -47,7 +47,9 @@ func (b *AmazonObjectStore) CreateBucket(bucketName string) error {
 	_, err = svc.CreateBucket(input)
 	if err != nil {
 		log.Errorf("Could not create a new S3 Bucket, %s", err.Error())
-		errors.Wrap(err, deleteFromDb(&ManagedAmazonBucket{Name:bucketName}).Error())
+		if e := deleteFromDbByPK(managedModel); e != nil {
+			log.Error(e.Error())
+		}
 		return err
 	}
 	log.Debugf("Waiting for bucket %s to be created...", bucketName)
