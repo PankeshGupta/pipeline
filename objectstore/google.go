@@ -11,6 +11,7 @@ import (
 	"google.golang.org/api/option"
 	apiStorage "google.golang.org/api/storage/v1"
 	"github.com/banzaicloud/pipeline/auth"
+	"github.com/pkg/errors"
 )
 
 type ManagedGoogleBuckets struct {
@@ -69,8 +70,14 @@ func (b *GoogleObjectStore) CreateBucket(bucketName string) error {
 		Location:      b.location,
 		RequesterPays: false,
 	}
+	err = persistToDb(&ManagedGoogleBuckets{Name: bucketName, User: *b.user})
+	if err != nil {
+		log.Errorf("Error happened during persisting bucket description to DB")
+		return err
+	}
 	if err := bucket.Create(ctx, b.serviceAccount.ProjectId, bucketAttrs); err != nil {
 		log.Errorf("Failed to create bucket: %s", err.Error())
+		errors.Wrap(err, deleteFromDb(&ManagedGoogleBuckets{Name:bucketName}).Error())
 		return err
 	}
 	log.Infof("%s bucket created in %s location", bucketName, b.location)

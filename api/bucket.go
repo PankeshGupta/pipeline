@@ -97,7 +97,8 @@ func CreateObjectStoreBuckets(c *gin.Context) {
 	log.Debug("Current user determined")
 
 	log.Debug("Validating secret")
-	retrievedSecret, err := secret.Store.Get(organizationID, createBucketRequest.SecretId)
+	retrievedSecret, err := getValidatedSecret(organizationID, createBucketRequest.SecretId,
+		determineCloudProviderFromRequest(createBucketRequest))
 	if err != nil {
 		if strings.Contains(err.Error(), "there's no secret with this id") {
 			c.JSON(http.StatusBadRequest, components.ErrorResponse{
@@ -127,8 +128,6 @@ func CreateObjectStoreBuckets(c *gin.Context) {
 	}
 	log.Debug("CommonObjectStoreBuckets created")
 	log.Debug("Bucket creation started")
-	log.Debug("Persisting Bucket description")
-	log.Debug("Persisting Bucket description succeeded")
 	if err = commonObjectStore.CreateBucket(createBucketRequest.Name); err != nil {
 		c.JSON(http.StatusBadRequest, components.ErrorResponse{
 			Code:    http.StatusBadRequest,
@@ -164,6 +163,19 @@ func getValidatedSecret(organizationId, secretId, cloudType string) (*secret.Sec
 	}
 
 	return retrievedSecret, nil
+}
+
+func determineCloudProviderFromRequest(req components.CreateBucketRequest) string {
+	if req.Properties.CreateAzureObjectStoreBucketProperties != nil {
+		return constants.Azure
+	}
+	if req.Properties.CreateAmazonObjectStoreBucketProperties != nil {
+		return constants.Amazon
+	}
+	if req.Properties.CreateGoogleObjectStoreBucketProperties != nil {
+		return constants.Google
+	}
+	return ""
 }
 
 // DeleteGoogleObjectStoteBucket deletes the GS bucket identified by name
