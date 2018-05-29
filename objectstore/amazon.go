@@ -9,6 +9,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/banzaicloud/pipeline/auth"
 	"github.com/pkg/errors"
+	"github.com/banzaicloud/pipeline/model"
 )
 
 type ManagedAmazonBucket struct {
@@ -65,16 +66,14 @@ func (b *AmazonObjectStore) CreateBucket(bucketName string) error {
 func (b *AmazonObjectStore) DeleteBucket(bucketName string) error {
 	log := logger.WithFields(logrus.Fields{"tag": "AmazonObjectStore.DeleteBucket"})
 
-	// check if the S3 to be deleted is managed or not
-	// only managed buckets are allowed to be deleted
-	if _, err := getManagedBucket(b.newManagedBucketSearchCriteria(bucketName)); err != nil {
+	_, err := GetValidatedManagedBucket(bucketName, b)
+	if err != nil {
 		return err
 	}
 
-
 	svc, err := b.createS3Client()
 	if err != nil {
-		log.Error("Creating S3Client failed: %s", err.Error())
+		log.Errorf("Creating S3Client failed: %s", err.Error())
 		return err
 	}
 
@@ -124,7 +123,20 @@ func (b *AmazonObjectStore) createS3Client() (*s3.S3, error) {
 func (b *AmazonObjectStore) newManagedBucketSearchCriteria(bucketName string) *ManagedAmazonBucket {
 	return &ManagedAmazonBucket{
 		Region: b.region,
-		User:   *b.user,
+		UserID: b.user.ID,
 		Name:   bucketName,
 	}
 }
+
+func (b *AmazonObjectStore) GetManagedBuckets(bucketName string) (interface{}, error) {
+	var managedBuckets []ManagedAmazonBucket
+
+	searchCriteria := b.newManagedBucketSearchCriteria(bucketName)
+
+	if err := model.GetDB().Find(&managedBuckets, searchCriteria).Error; err != nil {
+		return nil, err
+	}
+
+	return managedBuckets, nil
+}
+

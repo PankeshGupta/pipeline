@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"strings"
 	pipelineAuth "github.com/banzaicloud/pipeline/auth"
+	"github.com/banzaicloud/pipeline/model"
 )
 
 type ManagedAzureBlobStore struct {
@@ -63,6 +64,12 @@ func (b *AzureObjectStore) CreateBucket(bucketName string) error {
 
 func (b *AzureObjectStore) DeleteBucket(bucketName string) error {
 	log := logger.WithFields(logrus.Fields{"tag": "DeleteAzureBlobContainer"})
+
+	_, err := GetValidatedManagedBucket(bucketName, b)
+	if err != nil {
+		return err
+	}
+
 	key, err := getStorageAccountKey(b)
 	if err != nil {
 		return err
@@ -209,3 +216,25 @@ func newAuthorizer(s *secret.SecretsItemResponse) (autorest.Authorizer, error) {
 
 	return authorizer, nil
 }
+
+func (b *AzureObjectStore) newManagedBucketSearchCriteria(bucketName string) *ManagedAzureBlobStore {
+	return &ManagedAzureBlobStore{
+		UserID: b.user.ID,
+		Name:   bucketName,
+		ResourceGroup:  b.resourceGroup,
+		StorageAccount: b.storageAccount,
+	}
+}
+
+func (b *AzureObjectStore) GetManagedBuckets(bucketName string) (interface{}, error) {
+	var managedBuckets []ManagedAzureBlobStore
+
+	searchCriteria := b.newManagedBucketSearchCriteria(bucketName)
+
+	if err := model.GetDB().Find(&managedBuckets, searchCriteria).Error; err != nil {
+		return nil, err
+	}
+
+	return managedBuckets, nil
+}
+

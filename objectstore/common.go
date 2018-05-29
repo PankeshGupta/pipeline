@@ -8,6 +8,8 @@ import (
 	"github.com/banzaicloud/pipeline/secret"
 	"github.com/sirupsen/logrus"
 	"github.com/banzaicloud/pipeline/auth"
+	"errors"
+	"reflect"
 	"github.com/banzaicloud/pipeline/model"
 )
 
@@ -17,10 +19,17 @@ func init() {
 	logger = config.Logger()
 }
 
+var ManagedBucketNotFoundError 			= errors.New("Managed bucket not found")
+var MultipleManagedBucketsFoundError = errors.New("Multiple managed buckets found")
+
 type CommonObjectStore interface {
 	CreateBucket(string) error
 	ListBuckets() error
 	DeleteBucket(string) error
+}
+
+type ManagedBucketsStore interface {
+	GetManagedBuckets(string) (interface{}, error)
 }
 
 func ListCommonObjectStoreBuckets(s *secret.SecretsItemResponse) (CommonObjectStore, error) {
@@ -63,45 +72,49 @@ func CreateCommonObjectStoreBuckets(createBucketRequest components.CreateBucketR
 	}
 }
 
-func NewGoogleObjectStore(s *secret.SecretsItemResponse) (CommonObjectStore, error) {
+func NewGoogleObjectStore(s *secret.SecretsItemResponse, user *auth.User) (CommonObjectStore, error) {
 	return &GoogleObjectStore{
 		serviceAccount: NewGoogleServiceAccount(s),
+		user: user,
 	}, nil
 }
 
-func NewAmazonObjectStore(s *secret.SecretsItemResponse, region string) (CommonObjectStore, error) {
+func NewAmazonObjectStore(s *secret.SecretsItemResponse, user *auth.User, region string) (CommonObjectStore, error) {
 	return &AmazonObjectStore{
 		secret: s,
 		region: region,
+		user: 	user,
 	}, nil
 }
 
-func NewAzureObjectStore(s *secret.SecretsItemResponse, resourceGroup, storageAccount string) (CommonObjectStore, error) {
+func NewAzureObjectStore(s *secret.SecretsItemResponse, user *auth.User, resourceGroup, storageAccount string) (CommonObjectStore, error) {
 	return &AzureObjectStore{
 		storageAccount: storageAccount,
 		resourceGroup:  resourceGroup,
 		secret:         s,
+		user: 					user,
 	}, nil
 }
 
-func getManagedBucket(searchCriteria interface{}) (interface{}, error) {
-	var managedBuckets []interface{}
 
-	if err := model.GetDB().Where(searchCriteria).Find(&managedBuckets).Error; err != nil {
+
+func GetValidatedManagedBucket(bucketName string, managedBucketStore ManagedBucketsStore) (interface{}, error) {
+	managedBuckets, err := managedBucketStore.GetManagedBuckets(bucketName)
+	if err != nil {
 		return nil, err
 	}
 
-	if len(managedBuckets) == 0 {
-		return nil, nil // managed not found
+	managedBucketsTyped := reflect.ValueOf(managedBuckets)
+
+	if managedBucketsTyped.Len() == 0 {
+		return nil, ManagedBucketNotFoundError
 	}
 
-	if len(managedBuckets) > 1 {
-		return nil, nil // internal server error
+	if managedBucketsTyped.Len() > 1 {
+		return nil, MultipleManagedBucketsFoundError
 	}
 
-	managedBucket := managedBuckets[0]
-
-	return &managedBucket, nil
+	return managedBucketsTyped.Index(0), nil
 }
 
 func persistToDb(m interface{}) error {

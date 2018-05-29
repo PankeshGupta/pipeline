@@ -11,6 +11,7 @@ import (
 	"google.golang.org/api/option"
 	apiStorage "google.golang.org/api/storage/v1"
 	"github.com/banzaicloud/pipeline/auth"
+	"github.com/banzaicloud/pipeline/model"
 	"github.com/pkg/errors"
 )
 
@@ -131,3 +132,23 @@ func newGoogleCredentials(b *GoogleObjectStore) (*google.Credentials, error) {
 
 	return credentials, nil
 }
+
+func (b *GoogleObjectStore) newManagedBucketSearchCriteria(bucketName string) *ManagedGoogleBuckets {
+	return &ManagedGoogleBuckets{
+		UserID: b.user.ID,
+		Name:   bucketName,
+	}
+}
+
+func (b *GoogleObjectStore) GetManagedBuckets(bucketName string) (interface{}, error) {
+	var managedBuckets []ManagedGoogleBuckets
+
+	searchCriteria := b.newManagedBucketSearchCriteria(bucketName)
+
+	if err := model.GetDB().Find(&managedBuckets, searchCriteria).Error; err != nil {
+		return nil, err
+	}
+
+	return managedBuckets, nil
+}
+

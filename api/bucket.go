@@ -22,6 +22,7 @@ import (
 )
 
 
+
 type  SecretNotFoundError struct {
 	errMessage string
 }
@@ -197,7 +198,13 @@ func DeleteGoogleObjectStoteBucket(c *gin.Context) {
 		return
 	}
 
-	objectStore, err := objectstore.NewGoogleObjectStore(retrievedSecret)
+	user, err := auth.GetCurrentUserFromDB(c.Request)
+	if err != nil {
+		replyWithErrorResponse(c, errorResponseFrom(err))
+		return
+	}
+
+	objectStore, err := objectstore.NewGoogleObjectStore(retrievedSecret, user)
 	if err != nil {
 		log.Errorf("Instantiating GoogleObjectStore failed: %s", err.Error())
 		replyWithErrorResponse(c, errorResponseFrom(err))
@@ -234,13 +241,18 @@ func DeleteAmazonObjectStoreBucket(c *gin.Context) {
 		return
 	}
 
-	objectStore, err := objectstore.NewAmazonObjectStore(retrievedSecret, region)
+	user, err := auth.GetCurrentUserFromDB(c.Request)
+	if err != nil {
+		replyWithErrorResponse(c, errorResponseFrom(err))
+		return
+	}
+
+	objectStore, err := objectstore.NewAmazonObjectStore(retrievedSecret, user, region)
 	if err != nil {
 		log.Errorf("Instantiating AmazonObjectStore failed: %s", err.Error())
 		replyWithErrorResponse(c, errorResponseFrom(err))
 		return
 	}
-
 
 	if err = objectStore.DeleteBucket(name); err != nil {
 		log.Errorf("Deleting S3 bucket: organisation id=%s, region=%s, bucket=%s failed: %s", organizationId, region, name, err.Error())
@@ -272,7 +284,13 @@ func DeleteAzureObjectStoreContainer(c *gin.Context) {
 		return
 	}
 
-	objectStore, err := objectstore.NewAzureObjectStore(retrievedSecret, resourceGroup, storageAccount)
+	user, err := auth.GetCurrentUserFromDB(c.Request)
+	if err != nil {
+		replyWithErrorResponse(c, errorResponseFrom(err))
+		return
+	}
+
+	objectStore, err := objectstore.NewAzureObjectStore(retrievedSecret, user, resourceGroup, storageAccount)
 	if err != nil {
 		log.Errorf("Instantiating AzureObjectStore failed: %s", err.Error())
 		replyWithErrorResponse(c, errorResponseFrom(err))
@@ -288,14 +306,6 @@ func DeleteAzureObjectStoreContainer(c *gin.Context) {
 
 
 func errorResponseFrom(err error) *components.ErrorResponse {
-
-	if err == constants.ErrorNotSupportedCloudType {
-		return &components.ErrorResponse{
-			Code:    http.StatusBadRequest,
-			Error:   err.Error(),
-			Message: err.Error(),
-		}
-	}
 
 	// google specific errors
 	if googleApiErr, ok := err.(*googleapi.Error); ok {
@@ -364,6 +374,22 @@ func errorResponseFrom(err error) *components.ErrorResponse {
 	}
 
 	// pipeline specific errors
+	if err == constants.ErrorNotSupportedCloudType {
+		return &components.ErrorResponse{
+			Code:    http.StatusBadRequest,
+			Error:   err.Error(),
+			Message: err.Error(),
+		}
+	}
+
+	if err == objectstore.ManagedBucketNotFoundError {
+		return  &components.ErrorResponse{
+			Code:    http.StatusNotFound,
+			Error:   err.Error(),
+			Message: "Managed bucket not found",
+		}
+	}
+
 	switch err.(type) {
 	case SecretNotFoundError, secret.MissmatchError:
 		return &components.ErrorResponse{
